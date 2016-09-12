@@ -1,0 +1,272 @@
+<html>
+<head>
+	<title>Pigrator</title>
+	<link href="bootstrap.min.css" rel="stylesheet">
+	<link href="styles.css" rel="stylesheet">
+</head>
+<body>
+	<script src="jquery-1.11.2.min.js"></script>
+	<script src="script.js"></script>
+
+	<div id="twitter" class="panel panel-default">
+		<div class="panel-heading">Twitter</div>
+		<div id="twitterBody" class="panel-body">
+			<?php
+				function updateTwitter()
+				{
+					$consumerKey = "hidden";
+					$nonce = "kYjzVBB8Y0ZFabxSWbWovY3uYSQ2pTgmZeNu2VS4cg";
+					$signatureMethod = "HMAC-SHA1";
+					$timestamp = time();
+					$token = "hidden";
+					$version = "1.0";
+					$count = "20";
+
+					$httpMethod = "GET";
+					$baseURL = "https://api.twitter.com/1.1/statuses/home_timeline.json";
+					$parameterString = "count=" . $count . "&" .
+										"oauth_consumer_key=" . rawurlencode($consumerKey) . "&" .
+										"oauth_nonce=" . rawurlencode($nonce) . "&" .
+										"oauth_signature_method=" . rawurlencode($signatureMethod) . "&" .
+										"oauth_timestamp=" . rawurlencode($timestamp) . "&" .
+										"oauth_token=" . rawurlencode($token) . "&" .
+										"oauth_version=" . rawurlencode($version);
+					$signatureBase = $httpMethod . "&" . rawurlencode($baseURL) . "&" . rawurlencode($parameterString);
+
+					$consumerSecret = "hidden";
+					$tokenSecret = "hidden";
+					$signingKey = rawurlencode($consumerSecret) . "&" . rawurlencode($tokenSecret);
+
+					$signature = base64_encode(hash_hmac("sha1", $signatureBase, $signingKey, true));
+
+					$authHeader = "Authorization: OAuth " .
+						'oauth_consumer_key="' . rawurlencode($consumerKey) . '", ' .
+						'oauth_nonce="' . rawurlencode($nonce) . '", ' .
+						'oauth_signature="' . rawurlencode($signature) . '", ' .
+						'oauth_signature_method="' . rawurlencode($signatureMethod) . '", ' .
+						'oauth_timestamp="' . rawurlencode($timestamp) . '", ' .
+						'oauth_token="' . rawurlencode($token) . '", ' .
+						'oauth_version="' . rawurlencode($version) . '"';
+
+					$ch = curl_init();
+		
+					curl_setopt($ch, CURLOPT_URL, $baseURL . "?count=" . $count);
+					curl_setopt($ch, CURLOPT_HTTPHEADER, array($authHeader));
+					curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+					curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+
+					$data = curl_exec($ch);
+					echo curl_error($ch);
+
+					curl_close($ch);
+
+					$json = json_decode($data);
+
+					for($i = 0; $i < count($json); $i++)
+					{
+						$profilePicture = $json[$i]->user->profile_image_url_https;
+						$name = $json[$i]->user->name;
+						$text = $json[$i]->text;
+
+						echo buildTwitterEntry($profilePicture, $name, $text);
+					}
+				}
+
+				function buildTwitterEntry($profilePicture, $name, $text)
+				{
+					return '<div class="panel panel-default twitterEntry">
+								<div class="panel-heading">
+									<img src="' . $profilePicture . '" class="img-rounded">
+									' . $name .'
+								</div>
+								<div class="panel-body">
+									' . $text . '
+								</div>
+							</div>';
+				}
+
+				updateTwitter();
+			?>
+		</div>
+	</div>
+
+	<div id="instagram" class="panel panel-default">
+		<div class="panel-heading">Instagram<button type="button" class="btn btn-default btn-xs">Authorize</button></div>
+		<div id="instagramBody" class="panel-body">
+			<?php
+				function updateInstagram()
+				{
+					$clientID = "client_id=7776e80612704450ac61d5698051c743";
+					$clientSecret = "client_secret=hidden";
+					$grantType = "grant_type=authorization_code";
+					$redirectURI = "redirect_uri=http://localhost/pigrator";
+					$accessToken;
+
+					if(isset($_GET["code"]))
+					{
+						$code = "code=" . $_GET["code"];
+						$fields = $clientID . "&" . $clientSecret . "&" . $grantType . "&" . $redirectURI . "&" . $code;
+						$data = request("https://api.instagram.com/oauth/access_token", null, null, $fields);
+						$json = json_decode($data);
+
+						if(property_exists($json, "code"))
+						{
+							echo "<script type='text/javascript'>alert('" . $data . "');</script>";
+						}
+						else
+						{
+							$accessToken = $json->access_token;
+
+							$file = fopen("accessToken.txt", "w");
+							fwrite($file, $accessToken);
+							fclose($file);
+						}
+					}
+					else
+					{
+						$file = fopen("accessToken.txt", "r");
+						$accessToken = fread($file, filesize("accessToken.txt"));
+						fclose($file);
+					}
+
+					$url = "https://api.instagram.com/v1/users/self/feed";
+					$params = "?access_token=" . $accessToken;
+
+					$data = request($url, null, $params, null);
+					$json = json_decode($data);
+
+					for($i = 0; $i < count($json->data); $i++)
+					{
+						$profilePicture = $json->data[$i]->user->profile_picture;
+						$username = $json->data[$i]->user->username;
+						$likes = $json->data[$i]->likes->count;
+						$image = $json->data[$i]->images->standard_resolution->url;
+						$caption = $json->data[$i]->caption->text;
+
+						echo buildInstagramEntry($profilePicture, $username, $likes, $image, $caption);
+					}
+
+				}
+
+				function request($url, $header, $parameters = "", $fields)
+				{
+					$ch = curl_init();
+
+					curl_setopt($ch, CURLOPT_URL, $url . $parameters);
+
+					if(!is_null($header))
+						curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+
+					if(!is_null($fields))
+						curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+
+					curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+					curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+
+					$data = curl_exec($ch);
+					echo curl_error($ch);
+
+					return $data;
+				}
+
+				function buildInstagramEntry($profilePicture, $username, $likes, $image, $caption)
+				{
+					return '<div class="panel panel-default instagramEntry">
+								<div class="panel-heading">
+									<img src="' . $profilePicture . '" class="img-circle">
+									<div class="username">' . $username . '</div>
+									<div class="likes">' . $likes . ($likes == 1 ? " like" : " likes") . '</div>
+								</div>
+								<div class="panel-body">
+									<img src="' . $image . '" class="img-responsive">
+								</div>
+								<div class="panel-footer">'
+									. $caption .
+								'</div>
+							</div>';
+				}
+
+				updateInstagram();
+			?>
+		</div>
+	</div>
+
+	<div id="weather" class="panel panel-default">
+		<div class="panel-heading">Weather</div>
+		<div class="panel-body">
+			<h2>Fishers, IN</h2>
+			
+				
+				<?php
+					$ch = curl_init();
+					curl_setopt($ch, CURLOPT_URL, "http://api.openweathermap.org/data/2.5/weather?zip=46038,us&units=imperial");
+					curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+					curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+
+					$data = curl_exec($ch);
+					echo curl_error($ch);
+
+					curl_close($ch);
+
+					$json = json_decode($data);
+
+					$temperature = $json->main->temp;
+					$weatherMain = $json->weather[0]->main;
+					$weatherDesc = $json->weather[0]->description;
+					$windSpeed = $json->wind->speed;
+					$pressure = $json->main->pressure;
+					$humidity = $json->main->humidity;
+					$sunrise = $json->sys->sunrise;
+					$sunset = $json->sys->sunset;
+
+					date_default_timezone_set('EST');
+
+					$dateTime = new DateTime("@$sunrise");
+					$sunrise = $dateTime->format("h:i a");
+
+					$dateTime = new DateTime("@$sunset");
+					$sunset = $dateTime->format("h:i a");
+
+					echo "<h2 id='temp'>" . $temperature . "&deg;F</h2>
+						<p>" . $weatherMain . ", " . $weatherDesc . "</p>
+						<table class='table table-bordered'>
+							<tr>
+								<td>Wind speed</td>
+								<td>" . $windSpeed . "mph</tc>
+							</tr>
+							<tr>
+								<td>Pressure</td>
+								<td>" . $pressure . "hpa</td>
+							</tr>
+							<tr>
+								<td>Humidity</td>
+								<td>" . $humidity . "%</td>
+							</tr>
+							<tr>
+								<td>Sunrise</td>
+								<td>" . $sunrise . "</td>
+							</tr>
+							<tr>
+								<td>Sunset</td>
+								<td>" . $sunset . "</td>
+							</tr>
+						</table>";
+				?>
+
+			
+		</div>
+	</div>
+
+	<div id="time" class="panel panel-default">
+		<div class="panel-heading">Date/Time</div>
+		<div class="panel-body">
+			<?php
+				date_default_timezone_set('America/Indianapolis');
+				echo "<p>" . date("l, F j, Y") . "<br />" . date("h:i:s") . "</p>";
+			?>
+		</div>
+	</div>
+
+	
+</body>
+</html>

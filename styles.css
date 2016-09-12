@@ -1,0 +1,102 @@
+body {
+	margin: 15px;
+}
+
+.panel {
+	margin: 15px;
+	width: calc(33.33% - 30px);
+}
+
+#twitter {
+	float: left;
+	height: calc(100% - 30px);
+}
+
+#instagram {
+	float: left;
+	height: calc(100% - 30px);
+}
+
+#weather {
+	float: right;
+	height: calc(50% - 30px);
+}
+
+#time {
+	float: right;
+	height: calc(50% - 30px);
+}
+
+#instagram button {
+	float: right;
+}
+
+.instagramEntry, .twitterEntry {
+	margin: 0px;
+	width: 100%;
+}
+
+.img-circle, .img-rounded {
+	width: 40px;
+	height: 40px;
+	margin-right: 10px;
+}
+
+.username {
+	display: inline;
+}
+
+.likes {
+	float: right;
+	line-height: 38px;
+}
+
+#instagramBody {
+	padding: 0px;
+	height: calc(100% - 40px);
+	overflow: scroll;
+	overflow-x: hidden;
+}
+
+#twitterBody {
+	padding: 0px;
+	height: calc(100% - 40px);
+	overflow: scroll;
+	overflow-x: hidden;
+}
+
+#instagramBody .panel-body {
+	padding: 0px;
+}
+
+.instagramEntry .panel-heading, .twitterEntry .panel-heading {
+	padding: 5px 10px 5px 10px;
+}
+
+.instagramEntry {
+	margin-bottom: 15px;
+}
+
+#weather h2 {
+	margin-top: 0px;
+	display: inline;
+}
+
+#temp {
+	float: right;
+	font-size: 400%;
+}
+
+#weather .table {
+	margin-top: 40px;
+}
+
+#weather p {
+	font-size: medium;
+}
+
+#time .panel-body p {
+	font-size: 300%;
+	text-align: center;
+	margin-top: 50px;
+}
